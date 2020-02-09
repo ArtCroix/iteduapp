@@ -2,106 +2,91 @@
 
 namespace App\Http\Controllers\Mobile;
 
-use Illuminate\Support\Facades\Redis;
-
-use Illuminate\Http\Request;
-
-use App\User;
-
-use App\Http\Resources\Mobile\User as UserResource;
-
 use App\Http\Controllers\Controller;
-
+use App\Http\Resources\Mobile\User as UserResource;
+use App\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Redis;
 use JWTAuth;
 
 class UserDataController extends Controller
 {
 
-	public function __construct()
-	{
-		$this->middleware('jwt.verify');
-	}
+    public function gu($user_id)
+    {
+        Redis::set("test", 1);
+        $un = Redis::get("user:{$user_id}:jwt_token");
+        echo $un;
+    }
 
-	public static function isAllowed(User $user)
-	{
-		$payload = JWTAuth::manager()->getJWTProvider()->decode(JWTAuth::getToken()->get());
+    public function getUserSingleApplication($user_id = null, $apply_id = 0)
+    {
+        $user = User::with(['apps' => function ($query) use ($apply_id) {
+            $query->where('mdl3_apply.id', $apply_id);
+        }])->where('id', $user_id)->first();
 
+        if ($user) {
+            return new UserResource($user);
+        } else {
 
-		if ($payload['user_data']->approle == 'admin' || $payload['user_data']->id == $user->id) {
+            return response()->json(['error' => 'user wasn\'t found'], 404);
+        }
+    }
 
-			return true;
-		}
+    public function getUserAllApplication($user_id = null)
+    {
+        $user = User::with('apps')->where('id', $user_id)->first();
 
-		exit(json_encode(["error" => "not allowed"]));
-	}
+        if ($user) {
+            return new UserResource($user);
+        } else {
+            return response()->json(['error' => 'user wasn\'t found'], 404);
+        }
+    }
 
-	public function gu($user_id)
-	{
-		Redis::set("test", 1);
-		$un = Redis::get("user:{$user_id}:jwt_token");
-		echo $un;
-	}
+    public function getUserBaseInfo($user_id = null)
+    {
+        $user = User::where('id', $user_id)->first();
 
-	public function getUserSingleApplication($user_id = null, $apply_id = 0)
-	{
+        if ($user) {
+            return new UserResource($user);
+        } else {
+            return response()->json(['error' => 'user wasn\'t found'], 404);
+        }
+    }
 
-		$user = User::with(['apps' => function ($query) use ($apply_id) {
-			$query->where('mdl3_apply.id', $apply_id);
-		}])->where('id', $user_id)->first();
+    public function getUser($user_id = null)
+    {
+        $user = User::find($user_id)->load("groups");
 
-		if ($user) {
-			return new UserResource($user);
-		} else {
+        if ($user) {
+            return new UserResource($user);
+        } else {
+            return response()->json(['error' => 'user wasn\'t found'], 404);
+        }
+    }
 
-			return ["error" => "user wasn\'t found"];
-		}
-	}
+    public function getAllUsers()
+    {
+        return UserResource::collection(User::all()->where('id', "<>", 1));
+    }
 
-	public function getUserAllApplication($user_id = null)
-	{
-		$user = User::with('apps')->where('id', $user_id)->first();
+    public function updateUser($user_id)
+    {
 
-		if ($user) {
-			return new UserResource($user);
-		} else {
-			return ["error" => "user wasn\'t found"];
-		}
-	}
+        $user = User::find($user_id);
 
-	public function getUser($user_id = null)
-	{
-		$user = User::find($user_id)->load("groups");
+        if ($user) {
+            $updated = request()->except(['jwt_token', 'username', 'firstname', 'lastname', 'thirdname', 'mdlrole', 'approle', 'email', 'remember_token']);
+            try {
+                $user->update($updated);
+            } catch (QueryException $ex) {
+                return response()->json(['error' => $ex->getMessage()], 404);
+            }
+            return response()->json(['succes' => 'user was updated'], 200);
+        }
 
-		if ($user) {
-			return new UserResource($user);
-		} else {
-			return ["error" => "user wasn\'t found"];
-		}
-	}
-
-	public function getAllUsers()
-	{
-		return UserResource::collection(User::all()->where('id', "<>", 1));
-	}
-
-	public function updateUser($user_id)
-	{
-
-		$user = User::find($user_id);
-
-		if ($user) {
-			self::isAllowed($user);
-			$updated = request()->except(['jwt_token', 'username', 'firstname', 'lastname', 'thirdname', 'mdlrole', 'approle', 'email', 'remember_token']);
-			try {
-				$user->update($updated);
-			} catch (QueryException $ex) {
-				return ['error' => $ex->getMessage()];
-			}
-			return  ['succes' => 'user was updated'];
-		}
-
-		return ['error' => 'user wasn\'t found'];
-	}
+        return response()->json(['error' => 'user wasn\'t found'], 404);
+    }
 }

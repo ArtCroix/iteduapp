@@ -9,9 +9,9 @@ class Schedule extends Model
 {
     protected $guarded = [];
 
-    public function rooms()
+    public function room()
     {
-        return $this->belongsToMany('App\Mobile\Room', 'rooms_schedules')->withTimestamps();
+        return $this->belongsTo('App\Mobile\Room');
     }
 
     public function group()

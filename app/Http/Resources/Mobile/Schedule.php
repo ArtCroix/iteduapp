@@ -3,7 +3,7 @@
 namespace App\Http\Resources\Mobile;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-
+use App\Http\Resources\Mobile\RoomCollection;
 class Schedule extends JsonResource
 {
     /**
@@ -23,6 +23,10 @@ class Schedule extends JsonResource
             'end' =>  $this->end,
             'group_id' => $this->group->id,
             'comment' => $this->comment,
+            'room' => $this->room->room ?? null,
+            'building' => $this->room->building ?? null,
+            'lat' => $this->room->lat ?? null,
+            'lng' => $this->room->lng ?? null,
         ];
     }
 }

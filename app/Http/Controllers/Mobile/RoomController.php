@@ -2,84 +2,61 @@
 
 namespace App\Http\Controllers\Mobile;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Mobile\Room;
 use App\Http\Resources\Mobile\Room as RoomResource;
+use App\Mobile\Room;
+use Illuminate\Http\Request;
 use JWTAuth;
-
 
 class RoomController extends Controller
 {
 
-  public function __construct()
-  {
-    $this->middleware('jwt.verify');
-  }
+    public function addRoom()
+    {
 
-  public static function isAllowed()
-  {
-    $payload = JWTAuth::manager()->getJWTProvider()->decode(JWTAuth::getToken()->get());
-
-
-    if ($payload['user_data']->approle == 'admin') {
-
-      return true;
+        try {
+            Room::create([
+                'room' => request()->room,
+            ]);
+        } catch (QueryException $ex) {
+            return response()->json(['error' => $ex->getMessage()], 500);
+        }
+        return response()->json(['success' => 'room was added'], 200);
     }
 
-    exit(json_encode(["error" => "not allowed"]));
-  }
+    public function getRoom($room_id = 0)
+    {
+        $room = Room::with('directions')->find($room_id);
 
-  public function addRoom()
-  {
+        if ($room) {
+            return new RoomResource($room);
+        } else {
+            return response()->json(['error' => 'room wasn\'t found'], 404);
 
-    self::isAllowed();
-
-    try {
-      Room::create([
-        'room' => request()->room,
-      ]);
-    } catch (QueryException $ex) {
-      return ['error' => $ex->getMessage()];
-    }
-    return ['success' => 'room was added'];
-  }
-
-  public function getRoom($room_id = 0)
-  {
-    $room = Room::with('directions')->find($room_id);
-
-    self::isAllowed();
-
-    if ($room) {
-      return new RoomResource($room);
-    } else {
-      return ['error' => 'room wasn\'t found'];
-    }
-  }
-
-  public function updateRoom($room_id)
-  {
-
-    $room = Room::find($room_id);
-
-    if ($room) {
-      self::isAllowed();
-
-      $updated = request()->all();
-      try {
-        $room->update($updated);
-      } catch (QueryException $ex) {
-        return ['error' => $ex->getMessage()];
-      }
-      return  ['succes' => 'room was updated'];
+        }
     }
 
-    return ['error' => 'room wasn\'t found'];
-  }
+    public function updateRoom($room_id)
+    {
 
-  public function getAllRooms()
-  {
-    return RoomResource::collection(Room::all());
-  }
+        $room = Room::find($room_id);
+
+        if ($room) {
+
+            $updated = request()->all();
+            try {
+                $room->update($updated);
+            } catch (QueryException $ex) {
+                return response()->json(['error' => $ex->getMessage()], 500);
+            }
+            return response()->json(['succes' => 'room was updated'], 200);
+        }
+
+        return response()->json(['error' => 'room wasn\'t found'], 404);
+    }
+
+    public function getAllRooms()
+    {
+        return RoomResource::collection(Room::all());
+    }
 }

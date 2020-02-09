@@ -18,6 +18,12 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
+        'App\Events\UserAuthenticated' => [
+            'App\Listeners\AddToAllTopicInFirebase',
+        ],
+        'App\Events\UserUnAuthenticated' => [
+            'App\Listeners\RemoveFromAllTopicInFirebase',
+        ],
     ];
 
     /**

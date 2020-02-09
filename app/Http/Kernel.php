@@ -61,7 +61,15 @@ class Kernel extends HttpKernel
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'auth.jwt'  =>  \Tymon\JWTAuth\Http\Middleware\Authenticate::class
+        'jwt.verify' => \App\Http\Middleware\JwtMiddleware::class,
+        'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
+        'jwt.refresh' => \Tymon\JWTAuth\Http\Middleware\RefreshToken::class,
+        'custom_entity' => \App\Http\Middleware\CheckCustomEntityAccess::class,
+        'group_access' => \App\Http\Middleware\CheckGroupAccess::class,
+        'direction_access' => \App\Http\Middleware\CheckDirectionAccess::class,
+        'event_access' => \App\Http\Middleware\CheckEventAccess::class,
+        'user_access' => \App\Http\Middleware\CheckUserAccess::class,
+        'admin_access' => \App\Http\Middleware\CheckAdminAccess::class,
     ];
 
     /**

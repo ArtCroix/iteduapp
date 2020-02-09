@@ -2,115 +2,98 @@
 
 namespace App\Http\Controllers\Mobile;
 
-use App\Mobile\Group;
-
-use App\Mobile\Schedule;
-
-use Illuminate\Http\Request;
-
 use App\Http\Controllers\Controller;
-
 use App\Http\Controllers\Mobile\GroupController;
-
-use Illuminate\Database\QueryException;
-
 use App\Http\Resources\Mobile\Schedule as ScheduleResource;
+use App\Mobile\Group;
+use App\Mobile\Schedule;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
 
 class ScheduleController extends Controller
 {
+    public function addSchedule($group_id)
+    {
+        $group = Group::find($group_id);
 
-   public function __construct()
-   {
-      $this->middleware('jwt.verify');
-   }
+        if ($group) {
 
-   public function addSchedule($group_id)
-   {
-      $group = Group::find($group_id);
+            try {
+                $schedule = Schedule::create([
+                    'title' => request()->title,
+                    'start' => request()->start,
+                    'end' => request()->end,
+                    'group_id' => $group->id,
+                    'comment' => request()->comment ?? '',
+                ]);
 
-      if ($group) {
+                return $schedule;
+            } catch (QueryException $ex) {
+                return response()->json(['error' => $ex->getMessage()], 500);
+            }
+        }
+        return response()->json(['error' => 'group wasn\'t found'], 404);
+    }
 
-         GroupController::isAllowed($group);
-         try {
-            $schedule = Schedule::create([
-               'title' => request()->title,
-               'start' => request()->start,
-               'end' => request()->end,
-               'group_id' => $group->id,
-               'comment' => request()->comment ?? '',
-            ]);
+    public function updateSchedule($schedule_id)
+    {
 
-            return $schedule;
-         } catch (QueryException $ex) {
-            return ['error' => $ex->getMessage()];
-         }
-      }
-      return ['error' => 'group wasn\'t found'];
-   }
+        $schedule = Schedule::find($schedule_id);
+        $updated = request()->all();
+        if ($schedule) {
 
-   public function updateSchedule($schedule_id)
-   {
+            $group = Group::find($schedule->group_id);
 
-      $schedule = Schedule::find($schedule_id);
-      $updated = request()->all();
-      if ($schedule) {
+            try {
+                $schedule->update($updated);
+            } catch (QueryException $ex) {
+                return response()->json(['error' => $ex->getMessage()], 500);
+            }
+            return response()->json(['succes' => 'schedule was updated'], 200);
+        }
 
-         $group = Group::find($schedule->group_id);
-         GroupController::isAllowed($group);
-         try {
-            $schedule->update($updated);
-         } catch (QueryException $ex) {
-            return ['error' => $ex->getMessage()];
-         }
-         return  ['succes' => 'schedule was updated'];
-      }
+        return response()->json(['error' => 'schedule wasn\'t found'], 404);
+    }
 
-      return ['error' => 'schedule wasn\'t found'];
-   }
+    public function addRoomInSchedule($schedule_id)
+    {
+        $schedule = Schedule::find($schedule_id);
 
-   public function addRoomInSchedule($schedule_id)
-   {
-      $schedule = Schedule::find($schedule_id);
+        if ($schedule) {
 
-      if ($schedule) {
+            $group = Group::find($schedule->group_id);
 
-         $group = Group::find($schedule->group_id);
+            try {
+                $schedule->rooms()->syncWithoutDetaching(request()->room_id);
+            } catch (QueryException $ex) {
 
-         GroupController::isAllowed($group);
+                return response()->json(['error' => $ex->getMessage()], 500);
+            }
+        } else {
+            return response()->json(["error" => "Schedule wasn\'t found"], 404);
+        }
+        return response()->json(["success" => "Room was added in schedule"], 200);
+    }
 
-         try {
-            $schedule->rooms()->syncWithoutDetaching(request()->room_id);
-         } catch (QueryException $ex) {
+    public function deleteSchedule($schedule_id)
+    {
+        $schedule = Schedule::find($schedule_id);
 
-            return ['error' => $ex->getMessage()];
-         }
-      } else {
-         return ["error" => "Schedule wasn\'t found"];
-      }
-      return ["success" => "Room was added in schedule"];
-   }
+        if ($schedule) {
+            $group = Group::find($schedule->group_id);
 
-   public function deleteSchedule($schedule_id)
-   {
-      $schedule = Schedule::find($schedule_id);
+            try {
+                Schedule::destroy($schedule_id);
+            } catch (QueryException $ex) {
+                return response()->json(['error' => $ex->getMessage()], 500);
+            }
+            return response()->json(['success' => 'schedule was deleted'], 200);
+        }
+        return response()->json(['error' => 'schedule wasn\'t found'], 404);
+    }
 
-      if ($schedule) {
-         $group = Group::find($schedule->group_id);
-
-         GroupController::isAllowed($group);
-
-         try {
-            Schedule::destroy($schedule_id);
-         } catch (QueryException $ex) {
-            return ['error' => $ex->getMessage()];
-         }
-         return ['success' => 'schedule was deleted'];
-      }
-      return ['error' => 'schedule wasn\'t found'];
-   }
-
-   public function getAllSchedules()
-   {
-      return ScheduleResource::collection(Schedule::all());
-   }
+    public function getAllSchedules()
+    {
+        return ScheduleResource::collection(Schedule::all());
+    }
 }
